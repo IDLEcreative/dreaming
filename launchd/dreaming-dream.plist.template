@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  dreaming — monthly cron via launchd.
+
+  Install:
+    1. Copy this file to ~/Library/LaunchAgents/<reverse-domain>.dreaming-dream.plist
+       (e.g. com.<your-handle>.dreaming-dream.plist)
+    2. Substitute __DREAMING_REPO__, __HOME__, and __ADAPTER__ with real values.
+    3. launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<your-name>.plist
+
+  Schedule below: 1st of each month at 04:00 local time. Adjust StartCalendarInterval as you like.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>__LABEL__</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__DREAMING_REPO__/bin/dreaming</string>
+        <string>dream</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>__HOME__</string>
+        <key>DREAMING_HOME</key>
+        <string>__HOME__/.dreaming</string>
+        <key>DREAMING_ADAPTER</key>
+        <string>__ADAPTER__</string>
+        <key>PATH</key>
+        <string>__HOME__/.local/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Day</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>4</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>LowPriorityIO</key>
+    <true/>
+
+    <key>Nice</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>__HOME__/.dreaming/dream-logs/launchd-stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__HOME__/.dreaming/dream-logs/launchd-stderr.log</string>
+</dict>
+</plist>

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "dreaming",
+  "version": "1.0.0",
+  "description": "Long-term memory pipeline for LLM agents — capture, self-learn (weekly), dream (monthly), promote, fitness-check. LLM-agnostic core with a Claude Code surface.",
+  "author": {
+    "name": "James Guy",
+    "url": "https://github.com/IDLEcreative/dreaming"
+  },
+  "skills": [
+    "skills/dream",
+    "skills/learn-now",
+    "skills/promote-dream",
+    "skills/dream-health"
+  ],
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/../hooks/pending-review-reminder.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

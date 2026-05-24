@@ -1,0 +1,14 @@
+[Unit]
+Description=dreaming — monthly deep memory consolidation
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=__USER__
+Environment=HOME=__HOME__
+Environment=DREAMING_HOME=__HOME__/.dreaming
+Environment=DREAMING_ADAPTER=__ADAPTER__
+Environment=PATH=__HOME__/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/bin/bash __DREAMING_REPO__/bin/dreaming dream
+Nice=10
+IOSchedulingClass=idle

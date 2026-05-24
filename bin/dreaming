@@ -1,0 +1,101 @@
+#!/bin/bash
+# dreaming — LLM-agnostic long-term memory pipeline.
+# Subcommands dispatch to core/ scripts.
+
+set -uo pipefail
+
+DREAMING_REPO="$(cd "$(dirname "$0")/.." && pwd)"
+export DREAMING_REPO
+
+cmd="${1:-}"
+shift || true
+
+case "$cmd" in
+    dream)
+        # Deep monthly consolidation. Honors DRY_RUN=1, DREAMING_ADAPTER, DREAMING_MODEL.
+        exec bash "$DREAMING_REPO/core/dream.sh" "$@"
+        ;;
+    learn|self-learn)
+        # Weekly promotion-only loop. Lighter than dream.
+        if [ -f "$DREAMING_REPO/core/self-learn.sh" ]; then
+            exec bash "$DREAMING_REPO/core/self-learn.sh" "$@"
+        else
+            echo "dreaming: self-learn not yet ported to LLM-agnostic core (v1.1)" >&2
+            echo "  use ~/.claude/scripts/self-learn.sh in the meantime" >&2
+            exit 2
+        fi
+        ;;
+    promote)
+        # Review-and-adopt staged proposals. Same as the existing slash command.
+        if [ -f "$DREAMING_REPO/core/promote-dream.sh" ]; then
+            exec bash "$DREAMING_REPO/core/promote-dream.sh" "$@"
+        else
+            echo "dreaming: promote not yet ported to LLM-agnostic core (v1.1)" >&2
+            echo "  use ~/.claude/scripts/promote-dream.sh in the meantime" >&2
+            exit 2
+        fi
+        ;;
+    health|check)
+        # Run the fitness check on the latest dream run.
+        exec bash "$DREAMING_REPO/core/dream-quality-check.sh" "$@"
+        ;;
+    adapters)
+        # List available LLM adapters.
+        echo "Available adapters in $DREAMING_REPO/adapters/:"
+        for f in "$DREAMING_REPO/adapters/"*.sh; do
+            name=$(basename "$f" .sh)
+            # Skip the underscore-prefixed interface doc
+            [[ "$name" == _* ]] && continue
+            # Check whether it's a stub by grepping for the placeholder return
+            if grep -q "adapter not implemented yet" "$f" 2>/dev/null; then
+                printf "  %-12s STUB  (see %s for the contract)\n" "$name" "$f"
+            else
+                printf "  %-12s ready\n" "$name"
+            fi
+        done
+        echo ""
+        echo "Set DREAMING_ADAPTER=<name> to choose (default: claude)"
+        ;;
+    init)
+        # First-run setup: create $DREAMING_HOME, link claude memory dirs if present.
+        exec bash "$DREAMING_REPO/core/init.sh" "$@"
+        ;;
+    -h|--help|help|"")
+        cat <<EOF
+dreaming — long-term memory pipeline for LLM agents
+
+Usage:
+  dreaming <command> [args]
+
+Commands:
+  dream      Run the deep consolidation loop (monthly via cron, or manual)
+  learn      Run the weekly self-learn promotion loop
+  promote    Review and adopt staged proposals
+  health     Run the fitness check on the latest dream run
+  adapters   List available LLM adapters
+  init       First-run setup (create dirs, link existing memory)
+
+Env vars:
+  DREAMING_HOME      Data root (default ~/.dreaming)
+  DREAMING_ADAPTER   LLM driver: claude|codex|gemini|ollama|openai (default claude)
+  DREAMING_MODEL     Model override (adapter-specific; default per-adapter)
+  DRY_RUN=1          Skip LLM invocation (verifies pipeline without burning tokens)
+
+Examples:
+  dreaming dream                              # run with default adapter
+  DREAMING_ADAPTER=codex dreaming dream       # use Codex CLI instead
+  DRY_RUN=1 dreaming dream                    # dry-run smoke test
+  dreaming health --verbose                   # see why latest run did/didn't pass
+  dreaming adapters                           # see what's installed and ready
+
+Docs:
+  $DREAMING_REPO/README.md
+  $DREAMING_REPO/adapters/_interface.md   ← how to add a new LLM
+EOF
+        ;;
+    *)
+        echo "dreaming: unknown command '$cmd'" >&2
+        echo "Run 'dreaming help' for usage" >&2
+        exit 1
+        ;;
+esac
