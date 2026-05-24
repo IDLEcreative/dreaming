@@ -107,7 +107,26 @@ Data layer (separate from code, never overwritten by `git pull`):
 
 - **v1.0** — ✅ Adapter pattern, core dream loop, fitness check, Claude adapter working.
 - **v1.1** — ✅ self-learn.sh + promote-dream.sh ported. All four subcommands now route through the LLM-agnostic core. Claude users get full backward compatibility (DREAMING_HOME falls back to ~/.claude if no ~/.dreaming exists).
-- **v2.0** (vision) — Codex / Gemini / OpenAI / Ollama adapters implemented and tested. Cross-LLM benchmark: which model is best at the dream task at what cost?
+- **v1.2** — ✅ Codex adapter implemented + verified end-to-end. First cross-LLM bench passed.
+- **v1.3** (planned) — Prompt portability. Currently the dream/self-learn prompts hardcode `~/.claude/projects` paths in 29 sites; they need template variables (`$MEMORY_ROOT`, `$GLOBAL_INSTRUCTIONS`) substituted at runtime so non-Claude adapters can write inside their sandbox.
+- **v2.0** (vision) — Gemini / OpenAI / Ollama adapters implemented and tested. Cross-LLM benchmark grid: which model is best at dream at what cost?
+
+## Cross-LLM benchmark (2026-05-24)
+
+First A/B test of memory consolidation across two LLMs, same prompt, same data (10 projects, 268 memory files, 153 session JSONLs), isolated bench env.
+
+| Adapter | Score | Verdict | Runtime | Behavior |
+|---|---|---|---|---|
+| `claude` (claude-sonnet-4.6) | 7/7 | PASS | ~9 min | examined 4 clusters, deferred 5, no writes |
+| `codex` (gpt-5, ChatGPT auth) | 7/7 | PASS | ~7.5 min | examined 9-11 clusters, deferred all, no writes |
+
+Both LLMs hit zero merges/trims on the same input — exactly the conservative "if uncertain, LOG AND DEFER" behavior the dream prompt enforces. Codex's deeper cluster coverage (9-11 vs 4) and faster wall-clock (7.5 vs 9 min) are interesting first data points, but the headline is that **the abstraction works**: the same pipeline + the same prompt produces contract-compliant output across two materially different LLMs.
+
+Run your own:
+```bash
+bash tests/bench-adapter.sh codex 1800
+bash tests/bench-adapter.sh claude 2700
+```
 
 Contributions welcome — especially adapter implementations.
 
