@@ -17,23 +17,11 @@ case "$cmd" in
         ;;
     learn|self-learn)
         # Weekly promotion-only loop. Lighter than dream.
-        if [ -f "$DREAMING_REPO/core/self-learn.sh" ]; then
-            exec bash "$DREAMING_REPO/core/self-learn.sh" "$@"
-        else
-            echo "dreaming: self-learn not yet ported to LLM-agnostic core (v1.1)" >&2
-            echo "  use ~/.claude/scripts/self-learn.sh in the meantime" >&2
-            exit 2
-        fi
+        exec bash "$DREAMING_REPO/core/self-learn.sh" "$@"
         ;;
     promote)
-        # Review-and-adopt staged proposals. Same as the existing slash command.
-        if [ -f "$DREAMING_REPO/core/promote-dream.sh" ]; then
-            exec bash "$DREAMING_REPO/core/promote-dream.sh" "$@"
-        else
-            echo "dreaming: promote not yet ported to LLM-agnostic core (v1.1)" >&2
-            echo "  use ~/.claude/scripts/promote-dream.sh in the meantime" >&2
-            exit 2
-        fi
+        # Review-and-adopt staged proposals. Pure file ops — no LLM call.
+        exec bash "$DREAMING_REPO/core/promote-dream.sh" "$@"
         ;;
     health|check)
         # Run the fitness check on the latest dream run.
