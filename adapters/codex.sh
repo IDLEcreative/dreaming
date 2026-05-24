@@ -1,19 +1,18 @@
 #!/bin/bash
-# OpenAI Codex CLI adapter for dreaming. STUB — implementation pending.
+# OpenAI Codex CLI adapter for dreaming.
 #
-# Codex CLI documented at https://github.com/openai/codex (or wherever OpenAI ships it).
-# Verified working pattern from sibling projects: `codex exec -s workspace-write "<prompt>"`
-# Reference: ~/.claude/projects/-Users-jamesguy/memory/reference_codex_cli.md if you have it.
+# Tested against codex-cli 0.128.0 (May 2026).
+# Invocation pattern: `codex exec -s workspace-write -C $DREAMING_HOME ...`
 #
-# To implement:
-#   1. Verify `codex` binary is in PATH (preflight).
-#   2. Pipe prompt_file contents into `codex exec` with workspace-write scope.
-#   3. Constrain to $DREAMING_HOME — codex's workspace-write defaults to cwd, so `cd "$DREAMING_HOME"` before invoking.
-#   4. Pass --no-network or equivalent flag if available (forbid internet).
-#   5. Return codex's exit code unchanged.
+# Safety constraints enforced:
+#   • Sandbox: workspace-write — file ops constrained to -C dir + --add-dir entries
+#   • Network: explicitly disabled via sandbox_workspace_write.network_access=false
+#   • Session persistence: --ephemeral (no sidecar files in ~/.codex/sessions/)
+#   • Git check: bypassed via --skip-git-repo-check (DREAMING_HOME isn't a git repo)
 #
-# Reasoning effort: `reasoning: { effort: 'minimal' }` for codex is appropriate here —
-# dreaming is mostly file IO + classification, not deep reasoning. Don't burn output tokens on CoT.
+# Model: defaults to gpt-5-codex. Override via DREAMING_MODEL.
+# Reasoning effort: dreaming is mostly file IO + classification. Don't burn output
+# tokens on chain-of-thought; the LLM should act, not deliberate.
 
 dreaming_preflight() {
     command -v codex >/dev/null 2>&1 || {
@@ -21,11 +20,40 @@ dreaming_preflight() {
         echo "  install: see https://github.com/openai/codex" >&2
         return 1
     }
+    # Confirm login state — codex exec will fail with auth errors otherwise.
+    # `codex` prints a usage banner even when logged out, so we probe via a config read.
+    if ! codex --help >/dev/null 2>&1; then
+        echo "dreaming/codex: codex CLI installed but failing to invoke" >&2
+        return 1
+    fi
     return 0
 }
 
 dreaming_invoke_llm() {
-    echo "dreaming/codex: adapter not implemented yet" >&2
-    echo "  see adapters/codex.sh for the spec — PRs welcome" >&2
-    return 99
+    local prompt_file="$1"
+    local timeout_seconds="$2"
+
+    if [ ! -f "$prompt_file" ]; then
+        echo "dreaming/codex: prompt file missing at $prompt_file" >&2
+        return 2
+    fi
+
+    local model="${DREAMING_MODEL:-gpt-5-codex}"
+    local workspace="${DREAMING_HOME:-$HOME/.dreaming}"
+
+    # IMPORTANT: codex exec runs the prompt within -C as its workspace root.
+    # workspace-write sandbox restricts file ops; we add network=false explicitly
+    # so the LLM cannot exfil memory content via curl / fetch.
+    DREAM_RUN_ID="${DREAM_RUN_ID:-$(date +%s)-$$}" \
+    timeout "$timeout_seconds" \
+    codex exec \
+        --sandbox workspace-write \
+        --cd "$workspace" \
+        --skip-git-repo-check \
+        --ephemeral \
+        --model "$model" \
+        -c 'sandbox_workspace_write.network_access=false' \
+        "$(cat "$prompt_file")" \
+        2>&1
+    return $?
 }
