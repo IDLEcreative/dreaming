@@ -63,9 +63,20 @@ declare -a FAILURES=()
 declare -a PASSES=()
 
 # ── Rule 1: NO ★ Insight ─── blocks in the run summary ─────────────────
-# These were the loudest filler-pattern we removed; re-appearing means the
-# prompt's "output discipline" section got drifted or the model ignored it.
-INSIGHT_COUNT=$(grep -c "★ Insight" "$LATEST_LOG" 2>/dev/null || true)
+# Counts ACTUAL insight blocks (the multi-line shape "★ Insight ───...───")
+# not substring mentions — adapters whose CLI echoes the prompt verbatim
+# (codex exec) would otherwise spuriously match the prompt's own forbid-rule.
+# The shape: a line containing "★ Insight ─" followed within 6 lines by a
+# closing "─────────" rule. Substring-only matches (prompt text or quoted
+# memory) are excluded.
+INSIGHT_COUNT=$(awk '
+    /★ Insight ─/ { open=NR; pending++; next }
+    pending && (NR - open) <= 6 && /^[[:space:]]*─{5,}[[:space:]]*$/ {
+        boxes++; pending--; open=0; next
+    }
+    pending && (NR - open) > 6 { pending--; open=0 }
+    END { print boxes+0 }
+' "$LATEST_LOG" 2>/dev/null || true)
 INSIGHT_COUNT="${INSIGHT_COUNT:-0}"
 if [ "$INSIGHT_COUNT" -gt 0 ]; then
     FAILURES+=("R1: $INSIGHT_COUNT insight-box(es) in dream output (rule: zero)")
@@ -138,11 +149,21 @@ fi
 # ── Rule 6: Broken wiki-links in recently-adopted files ────────────────
 # Scans every file modified in the last 7 days under any memory/ dir for
 # [[X]] wiki-link references where X.md doesn't exist in the same dir.
+# Skips matches inside code spans/fences — Next.js dynamic-route syntax
+# like `[slug]/[[...path]]/route.ts` reads as a wiki-link to a naive grep
+# but is just a filename literal inside a code span.
 BROKEN_LINKS_COUNT=$(PROJECTS_ROOT="$PROJECTS" python3 - <<'PY' 2>/dev/null
 import os, re, time
 broken = 0
 now = time.time()
 projects_root = os.environ.get("PROJECTS_ROOT", os.path.expanduser("~/.dreaming/projects"))
+
+def strip_code_regions(text):
+    # Drop fenced code blocks first (``` ... ```), then inline code spans (` ... `).
+    text = re.sub(r'```[\s\S]*?```', '', text)
+    text = re.sub(r'`[^`\n]*`', '', text)
+    return text
+
 for root, dirs, files in os.walk(projects_root):
     # Skip _archive and _pending_review subtrees
     dirs[:] = [d for d in dirs if d not in ("_archive", "_pending_review")]
@@ -158,6 +179,7 @@ for root, dirs, files in os.walk(projects_root):
             body = open(fpath, encoding="utf-8", errors="ignore").read()
         except OSError:
             continue
+        body = strip_code_regions(body)
         for link in re.findall(r'\[\[([^\]]+)\]\]', body):
             link_path_md = os.path.join(root, link + ".md")
             link_path_raw = os.path.join(root, link)

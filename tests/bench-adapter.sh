@@ -55,7 +55,10 @@ for proj_dir in "$SOURCE_MEMORY"/*/; do
     proj=$(basename "$proj_dir")
     if [ -d "$proj_dir/memory" ]; then
         mkdir -p "$BENCH_HOME/projects/$proj"
-        cp -R "$proj_dir/memory" "$BENCH_HOME/projects/$proj/memory"
+        # -Rp preserves mtimes — without it, R6 would treat every file as
+        # 'modified <7d' and surface ALL pre-existing wiki-link issues, not
+        # just ones the bench run actually introduced.
+        cp -Rp "$proj_dir/memory" "$BENCH_HOME/projects/$proj/memory"
         n_copied=$((n_copied + 1))
     fi
 done
