@@ -38,8 +38,15 @@ dreaming_invoke_llm() {
         return 2
     fi
 
-    local model="${DREAMING_MODEL:-gpt-5-codex}"
     local workspace="${DREAMING_HOME:-$HOME/.dreaming}"
+
+    # Model selection: ChatGPT-account auth restricts the model set (e.g. 'gpt-5-codex'
+    # returns 400 for ChatGPT users). When DREAMING_MODEL is unset, let codex pick its
+    # config default — whatever the user's auth type allows. Only override when explicit.
+    local model_args=()
+    if [ -n "${DREAMING_MODEL:-}" ]; then
+        model_args=(--model "$DREAMING_MODEL")
+    fi
 
     # IMPORTANT: codex exec runs the prompt within -C as its workspace root.
     # workspace-write sandbox restricts file ops; we add network=false explicitly
@@ -51,7 +58,7 @@ dreaming_invoke_llm() {
         --cd "$workspace" \
         --skip-git-repo-check \
         --ephemeral \
-        --model "$model" \
+        "${model_args[@]+"${model_args[@]}"}" \
         -c 'sandbox_workspace_write.network_access=false' \
         "$(cat "$prompt_file")" \
         2>&1
