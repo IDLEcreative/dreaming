@@ -53,8 +53,8 @@ dreaming/
 ├── bin/dreaming               # dispatcher (one command, many subcommands)
 ├── core/                      # LLM-agnostic pipeline scripts
 │   ├── dream.sh               # the monthly deep loop
-│   ├── self-learn.sh          # weekly promotion loop (v1.1 port pending)
-│   ├── promote-dream.sh       # review-and-adopt (v1.1 port pending)
+│   ├── self-learn.sh          # weekly promotion loop
+│   ├── promote-dream.sh       # review-and-adopt (pure file ops — no LLM call)
 │   ├── dream-quality-check.sh # fitness function
 │   └── init.sh                # first-run setup
 ├── adapters/                  # LLM drivers — one file each, one function
@@ -105,8 +105,8 @@ Data layer (separate from code, never overwritten by `git pull`):
 
 ## Status
 
-- **v1.0** — Adapter pattern, core dream loop, fitness check, Claude adapter working.
-- **v1.1** (planned) — Port self-learn.sh and promote-dream.sh to fully LLM-agnostic. Currently they still reference `~/.claude/` paths and the `claude` binary directly. The dispatcher in `bin/dreaming` falls back to the existing `~/.claude/scripts/` versions if the ported ones aren't there.
+- **v1.0** — ✅ Adapter pattern, core dream loop, fitness check, Claude adapter working.
+- **v1.1** — ✅ self-learn.sh + promote-dream.sh ported. All four subcommands now route through the LLM-agnostic core. Claude users get full backward compatibility (DREAMING_HOME falls back to ~/.claude if no ~/.dreaming exists).
 - **v2.0** (vision) — Codex / Gemini / OpenAI / Ollama adapters implemented and tested. Cross-LLM benchmark: which model is best at the dream task at what cost?
 
 Contributions welcome — especially adapter implementations.
