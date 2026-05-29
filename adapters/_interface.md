@@ -42,6 +42,24 @@ dreaming_preflight() {
 - `DREAMING_MODEL` — model identifier override (e.g. `claude-sonnet-4-6`, `gpt-5.4`, `gemini-2.5-pro`). Adapter chooses a sensible default if unset.
 - `DREAMING_VERBOSE` — if `1`, emit per-step diagnostics to stderr.
 
+## Prompt is pre-rendered before it reaches you
+
+By the time the core calls `dreaming_invoke_llm`, the prompt template's `${...}`
+path placeholders have already been substituted to absolute paths by
+`core/lib/render-prompt.sh`. Your adapter just reads the file and passes its
+contents to the LLM — no path handling needed.
+
+If your LLM's on-disk layout differs from Claude Code's (where `CLAUDE.md` and
+`commands/` live under `~/.claude`), set these before the core renders:
+
+- `DREAMING_AGENT_CONFIG` — dir holding the global instructions file + command
+  defs. Defaults to `~/.claude`. Set empty/elsewhere if your LLM has no equivalent.
+- `DREAMING_CROSS_PROJECT_ROOT` — the cross-project memory layer. Defaults to
+  `$DREAMING_HOME/projects/-Users-<whoami>`.
+
+Most adapters need neither — the defaults work whenever `$DREAMING_HOME/projects`
+holds the memory tree.
+
 ## Why these constraints
 
 The dreaming pipeline mutates your memory dirs. The adapter is the trust boundary. If the LLM gets internet access or can spawn arbitrary agents, a prompt-injected memory file could exfiltrate your other memory files or modify them with adversarial content. The interface enforces the safety contract that the core pipeline depends on.

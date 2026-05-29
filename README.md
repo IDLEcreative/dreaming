@@ -108,8 +108,21 @@ Data layer (separate from code, never overwritten by `git pull`):
 - **v1.0** — ✅ Adapter pattern, core dream loop, fitness check, Claude adapter working.
 - **v1.1** — ✅ self-learn.sh + promote-dream.sh ported. All four subcommands now route through the LLM-agnostic core. Claude users get full backward compatibility (DREAMING_HOME falls back to ~/.claude if no ~/.dreaming exists).
 - **v1.2** — ✅ Codex adapter implemented + verified end-to-end. First cross-LLM bench passed.
-- **v1.3** (planned) — Prompt portability. Currently the dream/self-learn prompts hardcode `~/.claude/projects` paths in 29 sites; they need template variables (`$MEMORY_ROOT`, `$GLOBAL_INSTRUCTIONS`) substituted at runtime so non-Claude adapters can write inside their sandbox.
+- **v1.3** — ✅ Prompt portability. The dream/self-learn prompts now use template variables (`${MEMORY_ROOT}`, `${CROSS_PROJECT_ROOT}`, `${AGENT_CONFIG_HOME}`, `${DREAMING_HOME}`) substituted at runtime by `core/lib/render-prompt.sh`. Any adapter can now drive the prompt against any `$DREAMING_HOME` and write inside its own sandbox.
 - **v2.0** (vision) — Gemini / OpenAI / Ollama adapters implemented and tested. Cross-LLM benchmark grid: which model is best at dream at what cost?
+
+### Prompt template variables
+
+The prompts in `prompts/` use four `${...}` placeholders, resolved per-run before the LLM sees them. Adapter authors whose layout differs from Claude Code's can override the last two:
+
+| Variable | Default | Override env |
+|---|---|---|
+| `${MEMORY_ROOT}` | `$DREAMING_HOME/projects` | — |
+| `${CROSS_PROJECT_ROOT}` | `$MEMORY_ROOT/-Users-<whoami>` | `DREAMING_CROSS_PROJECT_ROOT` |
+| `${AGENT_CONFIG_HOME}` | `~/.claude` (Claude-only: CLAUDE.md + commands) | `DREAMING_AGENT_CONFIG` |
+| `${DREAMING_HOME}` | `~/.dreaming` | `DREAMING_HOME` |
+
+The LLM's own runtime references (`$DREAM_RUN_ID`, `$jsonl`) use the brace-less `$VAR` form and are never substituted.
 
 ## Cross-LLM benchmark (2026-05-24)
 
