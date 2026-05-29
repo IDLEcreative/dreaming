@@ -316,18 +316,25 @@ Green flags:
 - 3+ DISTINCT memory files (not session JSONLs) with overlapping topics → cross-file principle
 - Principle that connects 5+ specific memory-file lessons into one abstract rule
 
-## Final stdout summary
+## Your final output — the RUN SUMMARY is mandatory
+
+Your final output MUST be the `## RUN SUMMARY` block specified in the Logging
+section above, with **every field populated**. Do NOT substitute a shorter form.
+
+These fields are required and are checked by an automated post-run fitness gate
+— a summary missing any of them is a failed run:
+- the **Audited** line with the `split: K cross-project + L project-local` breakdown
+- the **Memory delta vs last dream run** line
+- **Examined but did not merge** clusters listed `[by, file, name]`
+- every **Deferred** item carrying a **Re-trigger**
+
+After the markdown RUN SUMMARY, emit exactly ONE machine-parseable completion
+line as the very last thing in your output (the runner greps for it):
 
 ```
-DREAM RUN COMPLETE
-Audited: <N files / M projects>
-Sessions harvested: <N sessions / X matches / Y denylist drops>
-Merged: <N>
-Trimmed: <N>
-Synthesised (live): <N>
-Synthesised (pending): <N>
-Caps hit: <list, or none>
-(For skill-gap detection, run /skill-gaps separately.)
+DREAM RUN COMPLETE — merged <N> / trimmed <N> / synth-live <N> / synth-pending <N> / caps <list-or-none>
 ```
+
+(For skill-gap detection, run `/skill-gaps` separately.)
 
 Now: begin.
