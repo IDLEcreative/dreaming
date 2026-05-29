@@ -43,6 +43,10 @@ fi
 # shellcheck source=/dev/null
 . "$ADAPTER_FILE"
 
+# Prompt renderer (substitutes ${MEMORY_ROOT} etc. before invoking the LLM)
+# shellcheck source=/dev/null
+. "$DREAMING_REPO/core/lib/render-prompt.sh"
+
 if declare -F dreaming_preflight >/dev/null 2>&1; then
     if ! dreaming_preflight; then
         echo "FATAL: adapter preflight failed" >&2
@@ -149,9 +153,17 @@ find "$SNAPSHOT_DIR" -type f -exec chmod a-w {} + 2>/dev/null || true
     llm_exit=0
   else
     cd "$DREAMING_HOME" || exit 1
-    DREAM_RUN_ID="$TIMESTAMP-$$" \
-      dreaming_invoke_llm "$PROMPT_FILE" "$DREAM_TIMEOUT_SECONDS"
-    llm_exit=$?
+    # Render the prompt template — substitute ${MEMORY_ROOT} etc. so the LLM
+    # gets absolute paths for THIS adapter/env, not literal ~/.claude refs.
+    RENDERED_PROMPT="$SNAPSHOT_DIR/rendered-prompt.md"
+    if ! dreaming_render_prompt "$PROMPT_FILE" "$RENDERED_PROMPT"; then
+      echo "FATAL: prompt render failed" >&2
+      llm_exit=3
+    else
+      DREAM_RUN_ID="$TIMESTAMP-$$" \
+        dreaming_invoke_llm "$RENDERED_PROMPT" "$DREAM_TIMEOUT_SECONDS"
+      llm_exit=$?
+    fi
     if [ "$llm_exit" -ne 0 ]; then
       echo "LLM_EXIT_CODE=$llm_exit"
     fi

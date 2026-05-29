@@ -46,6 +46,10 @@ fi
 # shellcheck source=/dev/null
 . "$ADAPTER_FILE"
 
+# Prompt renderer (substitutes ${MEMORY_ROOT} etc. before invoking the LLM)
+# shellcheck source=/dev/null
+. "$DREAMING_REPO/core/lib/render-prompt.sh"
+
 if declare -F dreaming_preflight >/dev/null 2>&1; then
     if ! dreaming_preflight; then
         echo "FATAL: adapter preflight failed" >&2
@@ -105,9 +109,15 @@ cp -R "$ROOT_MEMORY_DIR" "$SNAPSHOT_DIR/memory.before" 2>/dev/null || true
     llm_exit=0
   else
     cd "$DREAMING_HOME"
-    DREAM_RUN_ID="$TIMESTAMP-$$" \
-      dreaming_invoke_llm "$PROMPT_FILE" "$TIMEOUT_SECONDS"
-    llm_exit=$?
+    RENDERED_PROMPT="$SNAPSHOT_DIR/rendered-prompt.md"
+    if ! dreaming_render_prompt "$PROMPT_FILE" "$RENDERED_PROMPT"; then
+      echo "FATAL: prompt render failed" >&2
+      llm_exit=3
+    else
+      DREAM_RUN_ID="$TIMESTAMP-$$" \
+        dreaming_invoke_llm "$RENDERED_PROMPT" "$TIMEOUT_SECONDS"
+      llm_exit=$?
+    fi
   fi
 
   echo ""
