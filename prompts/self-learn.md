@@ -86,17 +86,20 @@ Green flags for promotion:
 - Appears across genuinely different project domains (Omniops backend AND Art & Algorithms content, for example).
 - New infrastructure or tooling change that invalidates a prior universal claim.
 
-## Final step
+## Final step — mandatory
 
-After making changes, print a compact summary to stdout:
+Two outputs are required, to two different destinations. Do BOTH:
+
+1. **The run log** — append the verbose `## YYYY-MM-DD HH:MM — run N` block (Step 6
+   shape, every field populated) to `${DREAMING_HOME}/self-learn-history.md`.
+2. **stdout** — emit exactly ONE machine-parseable completion line as the very last
+   thing in your output (the runner greps for it):
 
 ```
-SELF-LEARN RUN COMPLETE
-Promoted: N
-Edited: M  
-Superseded: K
-Deferred: J
-Log: ${DREAMING_HOME}/self-learn-history.md
+SELF-LEARN RUN COMPLETE — promoted <N> / edited <M> / superseded <K> / deferred <J>
 ```
+
+Neither is optional. The verbose block is the audit trail; the stdout line is the
+runner's completion signal. A run that skips either is incomplete.
 
 Now: begin.

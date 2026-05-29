@@ -63,20 +63,12 @@ declare -a FAILURES=()
 declare -a PASSES=()
 
 # ── Rule 1: NO ★ Insight ─── blocks in the run summary ─────────────────
-# Counts ACTUAL insight blocks (the multi-line shape "★ Insight ───...───")
-# not substring mentions — adapters whose CLI echoes the prompt verbatim
-# (codex exec) would otherwise spuriously match the prompt's own forbid-rule.
-# The shape: a line containing "★ Insight ─" followed within 6 lines by a
-# closing "─────────" rule. Substring-only matches (prompt text or quoted
-# memory) are excluded.
-INSIGHT_COUNT=$(awk '
-    /★ Insight ─/ { open=NR; pending++; next }
-    pending && (NR - open) <= 6 && /^[[:space:]]*─{5,}[[:space:]]*$/ {
-        boxes++; pending--; open=0; next
-    }
-    pending && (NR - open) > 6 { pending--; open=0 }
-    END { print boxes+0 }
-' "$LATEST_LOG" 2>/dev/null || true)
+# Counts ACTUAL emitted insight blocks, not substring mentions. A real box
+# OPENS the line ("★ Insight ─────"); a mention has the phrase mid-line inside
+# prose or backticks ("do not emit `★ Insight ───` blocks"). Anchoring at
+# line-start distinguishes them — and avoids matching the multibyte box-drawing
+# char with an interval, which BSD awk on macOS gets wrong.
+INSIGHT_COUNT=$(grep -cE '^[[:space:]]*★ Insight' "$LATEST_LOG" 2>/dev/null || true)
 INSIGHT_COUNT="${INSIGHT_COUNT:-0}"
 if [ "$INSIGHT_COUNT" -gt 0 ]; then
     FAILURES+=("R1: $INSIGHT_COUNT insight-box(es) in dream output (rule: zero)")
