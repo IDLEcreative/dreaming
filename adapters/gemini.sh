@@ -1,29 +1,52 @@
 #!/bin/bash
-# Google Gemini CLI adapter for dreaming. STUB — implementation pending.
+# Google Gemini CLI adapter for dreaming.
 #
-# Gemini CLI: `gemini-cli` from Google (https://github.com/google/gemini-cli)
-# Pattern: `gemini --prompt "$(cat <prompt-file>)" --tools file_read,file_write,shell`
+# Verified against gemini-cli 0.37.1 (May 2026).
+# Invocation: `gemini -p "<prompt>" --approval-mode yolo --sandbox`
 #
-# To implement:
-#   1. Verify `gemini` (or `gemini-cli`) binary is in PATH.
-#   2. Read prompt_file contents.
-#   3. Invoke gemini with file + shell tools enabled, sandboxed to $DREAMING_HOME.
-#   4. Use --no-internet / --sandbox flags if Gemini CLI exposes them.
-#   5. Return exit code.
+# Safety constraints:
+#   • Workspace: the LLM operates in cwd, which dream.sh sets to $DREAMING_HOME
+#     before calling the adapter.
+#   • Sandbox: --sandbox runs tool calls under macOS Seatbelt / Docker, isolating
+#     the filesystem + network. (Seatbelt is used automatically on macOS — no
+#     Docker required.)
+#   • Approval: --approval-mode yolo auto-approves tool calls (required for an
+#     unattended run); the sandbox is what bounds what those tools can touch.
 #
-# Model recommendation: gemini-2.5-pro for the dream prompt's complexity; flash for self-learn.
+# Model: defaults to the CLI's configured default. Override via DREAMING_MODEL.
 
 dreaming_preflight() {
-    if ! command -v gemini >/dev/null 2>&1 && ! command -v gemini-cli >/dev/null 2>&1; then
+    command -v gemini >/dev/null 2>&1 || {
         echo "dreaming/gemini: gemini CLI not found in PATH" >&2
-        echo "  install: see https://github.com/google/gemini-cli" >&2
+        echo "  install: https://github.com/google-gemini/gemini-cli" >&2
         return 1
-    fi
+    }
     return 0
 }
 
 dreaming_invoke_llm() {
-    echo "dreaming/gemini: adapter not implemented yet" >&2
-    echo "  see adapters/gemini.sh for the spec — PRs welcome" >&2
-    return 99
+    local prompt_file="$1"
+    local timeout_seconds="$2"
+
+    if [ ! -f "$prompt_file" ]; then
+        echo "dreaming/gemini: prompt file missing at $prompt_file" >&2
+        return 2
+    fi
+
+    local model_args=()
+    if [ -n "${DREAMING_MODEL:-}" ]; then
+        model_args=(-m "$DREAMING_MODEL")
+    fi
+
+    # gemini operates in cwd; dream.sh has already cd'd to $DREAMING_HOME.
+    # --sandbox bounds filesystem + network; --approval-mode yolo runs unattended.
+    DREAM_RUN_ID="${DREAM_RUN_ID:-$(date +%s)-$$}" \
+    timeout "$timeout_seconds" \
+    gemini \
+        -p "$(cat "$prompt_file")" \
+        --approval-mode yolo \
+        --sandbox \
+        "${model_args[@]+"${model_args[@]}"}" \
+        2>&1
+    return $?
 }

@@ -38,13 +38,13 @@ Add `~/Projects/dreaming/bin` to your PATH and `dreaming` becomes a top-level co
 
 | Adapter | Status | Setup |
 |---|---|---|
-| `claude` | ✅ working | Install the [Claude Code CLI](https://docs.anthropic.com/claude-code) |
-| `codex` | 🟡 stub | Install [OpenAI Codex CLI](https://github.com/openai/codex), implement `adapters/codex.sh` |
-| `gemini` | 🟡 stub | Install [Gemini CLI](https://github.com/google/gemini-cli), implement `adapters/gemini.sh` |
-| `ollama` | 🟡 stub | Install [Ollama](https://ollama.ai); needs a tool-calling shim (non-trivial) |
-| `openai` | 🟡 stub | Set `OPENAI_API_KEY`; needs a Python harness to do the tool-call loop |
+| `claude` | ✅ working | Install the [Claude Code CLI](https://docs.anthropic.com/claude-code). Full dream verified 7/7. |
+| `codex`  | ✅ working | Install [OpenAI Codex CLI](https://github.com/openai/codex). Full dream verified 7/7. |
+| `gemini` | ✅ working | Install [Gemini CLI](https://github.com/google-gemini/gemini-cli). CLI wrapper, OS-sandboxed (`--sandbox`). |
+| `openai` | ✅ working | Set `OPENAI_API_KEY`. Drives a shared Python tool loop; end-to-end verified. |
+| `ollama` | ✅ working | Install [Ollama](https://ollama.ai), `ollama serve`, set `DREAMING_MODEL` to a 70B-class tag. Same shim as openai. |
 
-Pick your LLM with `DREAMING_ADAPTER=<name>`. Adding a new one is one bash file implementing one function — see `adapters/_interface.md`.
+Pick your LLM with `DREAMING_ADAPTER=<name>`. The CLI adapters (claude/codex/gemini) bring OS-level sandboxing; the API adapters (openai/ollama) use the shim's best-effort sandbox (path-checked writes + network-egress denylist). Adding a new CLI is one bash file implementing one function — see `adapters/_interface.md`.
 
 ## Architecture
 
@@ -59,11 +59,12 @@ dreaming/
 │   └── init.sh                # first-run setup
 ├── adapters/                  # LLM drivers — one file each, one function
 │   ├── _interface.md          # the contract
-│   ├── claude.sh              # ✅ working
-│   ├── codex.sh               # 🟡 stub
-│   ├── gemini.sh              # 🟡 stub
-│   ├── ollama.sh              # 🟡 stub
-│   └── openai.sh              # 🟡 stub
+│   ├── claude.sh              # ✅ working (full dream verified)
+│   ├── codex.sh               # ✅ working (full dream verified, 7/7)
+│   ├── gemini.sh              # ✅ CLI wrapper (preflight verified)
+│   ├── ollama.sh              # ✅ via shared shim (needs 70B model + daemon)
+│   ├── openai.sh              # ✅ via shared shim (tool loop verified)
+│   └── lib/openai_tool_loop.py # shared OpenAI-compatible agentic loop (openai + ollama)
 ├── prompts/                   # the LLM instructions (LLM-agnostic markdown)
 │   ├── dream.md               # the monthly deep prompt
 │   └── self-learn.md          # the weekly promotion prompt

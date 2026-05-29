@@ -1,25 +1,16 @@
 #!/bin/bash
-# Ollama (local LLM) adapter for dreaming. STUB — implementation pending.
+# Ollama (local LLM) adapter for dreaming. Drives adapters/lib/openai_tool_loop.py
+# against Ollama's OpenAI-compatible endpoint (http://localhost:11434/v1).
 #
-# Ollama runs models locally with no API key. https://ollama.ai
-# Pattern: `ollama run <model> < prompt-file`
+# No API key, no cloud — runs entirely on your machine.
 #
-# CAVEAT — local models are mostly NOT capable enough for the dream prompt today.
-# The dream loop does merge-vs-trim classification, cross-project supersession detection,
-# and 7-section structured output. Small local models (8B and under) will produce
-# rule-violating output that fails the fitness check. Use 70B+ models or expect failures.
+# CAVEAT — model capability. The dream loop does merge-vs-trim classification,
+# cross-project supersession detection, and structured tool use. Small local
+# models (≤8B) will produce rule-violating output that fails the fitness check.
+# Use a 70B-class model with solid tool-calling (e.g. llama-3.3-70b, qwen-2.5-72b).
+# Set DREAMING_MODEL to the exact `ollama list` tag.
 #
-# Tested OK for self-learn (simpler promotion-only loop) on llama-3.1-70b at 4-bit.
-# Untested for dream — likely needs llama-3.3-70b or qwen-2.5-72b minimum.
-#
-# To implement:
-#   1. Verify ollama is running (curl localhost:11434).
-#   2. Verify the chosen model is pulled (ollama list).
-#   3. Wrap ollama with a shim that gives it Read/Write/Bash tool access
-#      — ollama itself doesn't have tool-calling; you'd need a separate harness
-#      like ollama-functions or a custom MCP server.
-#
-# This is the highest-effort adapter. Recommend punting until at least one cloud LLM works.
+# Sandbox: best-effort (Python shim — see openai_tool_loop.py header).
 
 dreaming_preflight() {
     command -v ollama >/dev/null 2>&1 || {
@@ -27,17 +18,35 @@ dreaming_preflight() {
         echo "  install: https://ollama.ai" >&2
         return 1
     }
-    # Check that ollama daemon is running
+    command -v python3 >/dev/null 2>&1 || { echo "dreaming/ollama: python3 required" >&2; return 1; }
+    # Daemon must be up to serve the OpenAI-compatible API.
     curl -sf http://localhost:11434/api/tags >/dev/null 2>&1 || {
-        echo "dreaming/ollama: ollama daemon not running (curl localhost:11434 failed)" >&2
-        echo "  start with: ollama serve" >&2
+        echo "dreaming/ollama: daemon not reachable at localhost:11434 — run 'ollama serve'" >&2
         return 1
     }
+    if [ -z "${DREAMING_MODEL:-}" ]; then
+        echo "dreaming/ollama: set DREAMING_MODEL to an installed model tag (see 'ollama list')" >&2
+        echo "  recommend a 70B-class model — smaller ones fail the dream contract" >&2
+        return 1
+    fi
     return 0
 }
 
 dreaming_invoke_llm() {
-    echo "dreaming/ollama: adapter not implemented yet" >&2
-    echo "  local LLMs need a tool-calling harness — see adapters/ollama.sh notes" >&2
-    return 99
+    local prompt_file="$1"
+    local timeout_seconds="$2"
+    local workspace="${DREAMING_HOME:-$HOME/.dreaming}"
+    local model="${DREAMING_MODEL}"   # required (enforced in preflight)
+    local shim
+    shim="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/openai_tool_loop.py"
+
+    DREAM_RUN_ID="${DREAM_RUN_ID:-$(date +%s)-$$}" \
+    timeout "$timeout_seconds" \
+    python3 "$shim" \
+        --workspace "$workspace" \
+        --prompt-file "$prompt_file" \
+        --base-url "http://localhost:11434/v1" \
+        --model "$model" \
+        2>&1
+    return $?
 }
