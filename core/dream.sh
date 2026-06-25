@@ -246,3 +246,9 @@ find "$LOG_DIR/snapshots" -mindepth 1 -maxdepth 1 -type d -mtime +90 -exec rm -r
 find "$LOG_DIR" -maxdepth 1 -name "run-*.log" -mtime +90 -delete 2>/dev/null || true
 
 echo "Dream run logged to $LOG_FILE (adapter=$DREAMING_ADAPTER, exit=${llm_exit:-?})"
+
+# Propagate the LLM's exit status as our own. Without this the script's last
+# command is the echo above (always 0), so launchd records LastExitStatus=0
+# even when the run failed (e.g. Claude weekly-limit exit=1 on 2026-06-01),
+# the cleanup trap never writes .dream-last-failed, and the failure is silent.
+exit "${llm_exit:-1}"
