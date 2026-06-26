@@ -241,6 +241,14 @@ if [ "${llm_exit:-1}" -eq 0 ]; then
   fi
 fi
 
+# ── Failure alert (best-effort, macOS) ──
+# Symmetric with the success notify above. A scheduled run that fails (e.g. the
+# Claude weekly-limit exit=1 on 2026-06-01) must surface so it can be re-run
+# manually that day — otherwise it silently skips a whole month.
+if [ "${llm_exit:-1}" -ne 0 ] && command -v osascript >/dev/null 2>&1; then
+  osascript -e 'display notification "Memory consolidation FAILED — open Claude and run /dream manually" with title "Dreaming: run failed" sound name "Basso"' 2>/dev/null || true
+fi
+
 # ── Retention ──
 find "$LOG_DIR/snapshots" -mindepth 1 -maxdepth 1 -type d -mtime +90 -exec rm -rf {} + 2>/dev/null || true
 find "$LOG_DIR" -maxdepth 1 -name "run-*.log" -mtime +90 -delete 2>/dev/null || true
