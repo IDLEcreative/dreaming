@@ -27,6 +27,14 @@ case "$cmd" in
         # Run the fitness check on the latest dream run.
         exec bash "$DREAMING_REPO/core/dream-quality-check.sh" "$@"
         ;;
+    hygiene)
+        # Lint every project memory index. Never mutates. Exit 1 on hard issues.
+        exec bash "$DREAMING_REPO/core/memory-hygiene.sh" "$@"
+        ;;
+    rebalance)
+        # Move low-priority index sections to MEMORY-extended.md. Dry-run by default.
+        exec python3 "$DREAMING_REPO/core/memory-rebalance.py" "$@"
+        ;;
     adapters)
         # List available LLM adapters.
         echo "Available adapters in $DREAMING_REPO/adapters/:"
@@ -60,6 +68,8 @@ Commands:
   learn      Run the weekly self-learn promotion loop
   promote    Review and adopt staged proposals
   health     Run the fitness check on the latest dream run
+  hygiene    Lint every project memory index (orphans, dead links, budgets)
+  rebalance  Move low-priority index sections to MEMORY-extended.md
   adapters   List available LLM adapters
   init       First-run setup (create dirs, link existing memory)
 
@@ -69,11 +79,20 @@ Env vars:
   DREAMING_MODEL     Model override (adapter-specific; default per-adapter)
   DRY_RUN=1          Skip LLM invocation (verifies pipeline without burning tokens)
 
+  Hygiene budgets (see docs/MEMORY-HYGIENE.md for the full set):
+  DREAMING_MEMORY_ROOT          Memory root (default \$DREAMING_HOME/projects)
+  DREAMING_INDEX_BUDGET_BYTES   Hard ceiling for MEMORY.md (default 32768)
+  DREAMING_INDEX_LINE_BUDGET    Max chars per index entry (default 300)
+  DREAMING_RETIRE_AGE_DAYS      Staleness threshold for retire hints (default 45)
+
 Examples:
   dreaming dream                              # run with default adapter
   DREAMING_ADAPTER=codex dreaming dream       # use Codex CLI instead
   DRY_RUN=1 dreaming dream                    # dry-run smoke test
   dreaming health --verbose                   # see why latest run did/didn't pass
+  dreaming hygiene                            # lint all memory indexes
+  dreaming hygiene --project myproj           # lint one project
+  dreaming rebalance --dir <memory-dir>       # dry-run a section move
   dreaming adapters                           # see what's installed and ready
 
 Docs:

@@ -19,7 +19,7 @@ Most agent setups have a memory problem. They append to a `MEMORY.md`, drift acc
 | **dream** | monthly | Deep consolidation. Reads all memory, merges duplicates, trims stale, synthesises principles, surfaces skill gaps. Snapshot before, full rollback. |
 | **promote** | manual | Review-and-adopt step. Stages → live with explicit confirmation. Default mode is dry-run; `--commit` to actually apply. |
 
-Plus a **fitness function** (`dreaming health`) that mechanically verifies every dream run followed the contract, catching prompt drift before it corrupts memory.
+Plus a **fitness function** (`dreaming health`) that mechanically verifies every dream run followed the contract, catching prompt drift before it corrupts memory, and a **memory linter** (`dreaming hygiene`) that catches the rot the loops cannot see: memories written but never indexed, indexes pointing at files that have gone, and an index grown past what the harness will load.
 
 ## Quick start
 
@@ -30,6 +30,7 @@ git clone https://github.com/<your-handle>/dreaming.git ~/Projects/dreaming
 DRY_RUN=1 ~/Projects/dreaming/bin/dreaming dream     # smoke-test (no LLM call)
 ~/Projects/dreaming/bin/dreaming dream               # real run (uses ~$1-3 in LLM credits)
 ~/Projects/dreaming/bin/dreaming health              # was the run clean?
+~/Projects/dreaming/bin/dreaming hygiene             # is the memory itself healthy?
 ```
 
 Add `~/Projects/dreaming/bin` to your PATH and `dreaming` becomes a top-level command.
@@ -56,6 +57,8 @@ dreaming/
 │   ├── self-learn.sh          # weekly promotion loop
 │   ├── promote-dream.sh       # review-and-adopt (pure file ops — no LLM call)
 │   ├── dream-quality-check.sh # fitness function
+│   ├── memory-hygiene.sh      # memory linter (7 checks, never mutates)
+│   ├── memory-rebalance.py    # move index sections to load-on-demand
 │   └── init.sh                # first-run setup
 ├── adapters/                  # LLM drivers — one file each, one function
 │   ├── _interface.md          # the contract
@@ -69,7 +72,10 @@ dreaming/
 │   ├── dream.md               # the monthly deep prompt
 │   └── self-learn.md          # the weekly promotion prompt
 ├── hooks/
-│   └── pending-review-reminder.sh   # surfaces aged proposals (Claude Code Stop hook)
+│   ├── pending-review-reminder.sh   # surfaces aged proposals (Claude Code Stop hook)
+│   ├── memory-index-drift.sh        # warns when a memory is written but not indexed
+│   ├── memory-dupe-check.sh         # warns on near-duplicate memories; logs recall misses
+│   └── memory-usage-tally.sh        # read counts, so retirement can be evidence-based
 ├── claude-plugin/             # optional: register as a Claude Code plugin
 │   ├── plugin.json
 │   └── skills/                # /dream, /dream-health, /learn-now, /promote-dream
@@ -84,6 +90,7 @@ Data layer (separate from code, never overwritten by `git pull`):
 ~/.dreaming/                   # $DREAMING_HOME — your memory + state
 ├── projects/<project>/memory/ # per-project memory files (markdown + frontmatter)
 │   ├── MEMORY.md              # index — what's in this dir
+│   ├── MEMORY-extended.md     # overflow index, loaded on demand (from rebalance)
 │   ├── feedback_*.md          # captured learnings
 │   ├── reference_*.md         # reusable references
 │   ├── principle_*.md         # synthesised principles (from dream)
@@ -92,8 +99,39 @@ Data layer (separate from code, never overwritten by `git pull`):
 ├── dream-logs/                # per-run logs + snapshots
 ├── dream-history.md           # human-readable run history
 ├── dream-quality-history.jsonl # one JSON line per run, score trend
+├── memory-usage.jsonl         # one line per memory read (retirement evidence)
+├── memory-dupe-log.jsonl      # one line per near-duplicate caught (recall misses)
+├── index-drift.log            # memories written but not indexed
 └── .dream-last-run            # epoch sentinel for "did dream run recently?"
 ```
+
+## Memory hygiene
+
+The four loops curate memory. They cannot see the rot that happens *between*
+runs: a memory written but never indexed, an index line pointing at a file that
+has been archived, an index grown past the size the harness will actually load.
+That rot is silent, so it needs a linter rather than a loop.
+
+```bash
+dreaming hygiene                               # 7 checks over every memory dir
+dreaming rebalance --dir <memory-dir>          # dry-run a section move
+bash hooks/memory-usage-tally.sh --report      # most-read and never-read memories
+```
+
+`dreaming hygiene` never mutates. Four checks are hard (orphans, dead links,
+size budget, over-long entries) and exit 1; three are advisory (size nearing,
+retire candidates, dead cited paths) and print without changing the exit code.
+It makes a good step 0 for a dream run.
+
+Three optional hooks feed it evidence: `memory-index-drift.sh` warns the session
+the moment it writes a memory it forgot to index, `memory-dupe-check.sh` warns on
+near-duplicates and logs each one as a **recall miss** (the session had that
+knowledge and failed to find it, which over time is a measured answer to "do we
+need vector search yet?"), and `memory-usage-tally.sh` counts reads so
+retirement can be argued from usage instead of from age.
+
+Full detail, wiring, and configuration: [`docs/MEMORY-HYGIENE.md`](docs/MEMORY-HYGIENE.md).
+Tests: `bash tests/run-hygiene-tests.sh` (51 assertions, synthetic fixtures only).
 
 ## Safety
 
@@ -103,6 +141,7 @@ Data layer (separate from code, never overwritten by `git pull`):
 - **Dry-run default for adoption.** `promote adopt <run-id>` is dry-run unless you pass `--commit`.
 - **Hash-at-stage.** Every staged proposal gets a `.sha256` sentinel at staging time. Adoption verifies the hash — tampering between stage and adopt fails closed.
 - **Fitness function as guardrail.** `dreaming health` runs after every dream and surfaces contract violations. The score lands in `dream-quality-history.jsonl` whether anyone looks or not — drift can't accumulate silently.
+- **The linter never mutates.** `dreaming hygiene` only ever reports, including its retirement candidates: deciding what to archive is a judgement call for a dream run, not a grep. `dreaming rebalance` is dry-run by default, backs up both files, verifies entry conservation, and aborts rather than half-fixing.
 
 ## Status
 
@@ -110,6 +149,7 @@ Data layer (separate from code, never overwritten by `git pull`):
 - **v1.1** — ✅ self-learn.sh + promote-dream.sh ported. All four subcommands now route through the LLM-agnostic core. Claude users get full backward compatibility (DREAMING_HOME falls back to ~/.claude if no ~/.dreaming exists).
 - **v1.2** — ✅ Codex adapter implemented + verified end-to-end. First cross-LLM bench passed.
 - **v1.3** — ✅ Prompt portability. The dream/self-learn prompts now use template variables (`${MEMORY_ROOT}`, `${CROSS_PROJECT_ROOT}`, `${AGENT_CONFIG_HOME}`, `${DREAMING_HOME}`) substituted at runtime by `core/lib/render-prompt.sh`. Any adapter can now drive the prompt against any `$DREAMING_HOME` and write inside its own sandbox.
+- **v1.4** ✅ Memory hygiene toolkit. `dreaming hygiene` (7-check linter, never mutates), `dreaming rebalance` (moves index sections to load-on-demand instead of compressing further), and three optional hooks recording index drift, near-duplicates as recall misses, and per-memory read counts. 51 tests over synthetic fixtures.
 - **v2.0** (vision) — Gemini / OpenAI / Ollama adapters implemented and tested. Cross-LLM benchmark grid: which model is best at dream at what cost?
 
 ### Prompt template variables

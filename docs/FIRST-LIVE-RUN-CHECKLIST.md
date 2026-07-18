@@ -10,11 +10,11 @@ code yet**. These first two unattended runs are the real production test.
 
 | Run | Job | First live fire | Fitness-gated? |
 |---|---|---|---|
-| **self-learn** (weekly) | `com.jamesguy.dreaming-self-learn` | **Sun 2026-05-31, 03:00 BST** | No (writes its own history only) |
-| **dream** (monthly) | `com.jamesguy.dreaming-dream` | **Mon 2026-06-01, 03:30 BST** | Yes (R1–R7 score appended) |
+| **self-learn** (weekly) | `com.example.dreaming-self-learn` | **Sun 2026-05-31, 03:00 BST** | No (writes its own history only) |
+| **dream** (monthly) | `com.example.dreaming-dream` | **Mon 2026-06-01, 03:30 BST** | Yes (R1–R7 score appended) |
 
 Both run as: `/bin/bash ~/Projects/dreaming/bin/dreaming {learn|dream}` with
-`DREAMING_HOME=/Users/jamesguy/.dreaming` (projects symlinked → `~/.claude/projects`).
+`DREAMING_HOME=$HOME/.dreaming` (projects symlinked → `~/.claude/projects`).
 
 ---
 
@@ -84,12 +84,12 @@ Most likely cause: launchd's stripped environment. The plists set `HOME`, `PATH`
 Rollback to the legacy claude-only cron (reversible, ~10s):
 ```bash
 UID=$(id -u)
-launchctl bootout gui/$UID ~/Library/LaunchAgents/com.jamesguy.dreaming-dream.plist
-launchctl bootout gui/$UID ~/Library/LaunchAgents/com.jamesguy.dreaming-self-learn.plist
-mv ~/Library/LaunchAgents/com.jamesguy.claude-dream.plist.bak ~/Library/LaunchAgents/com.jamesguy.claude-dream.plist
-mv ~/Library/LaunchAgents/com.jamesguy.claude-self-learn.plist.bak ~/Library/LaunchAgents/com.jamesguy.claude-self-learn.plist
-launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.jamesguy.claude-dream.plist
-launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.jamesguy.claude-self-learn.plist
+launchctl bootout gui/$UID ~/Library/LaunchAgents/com.example.dreaming-dream.plist
+launchctl bootout gui/$UID ~/Library/LaunchAgents/com.example.dreaming-self-learn.plist
+mv ~/Library/LaunchAgents/com.example.claude-dream.plist.bak ~/Library/LaunchAgents/com.example.claude-dream.plist
+mv ~/Library/LaunchAgents/com.example.claude-self-learn.plist.bak ~/Library/LaunchAgents/com.example.claude-self-learn.plist
+launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.example.claude-dream.plist
+launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.example.claude-self-learn.plist
 ```
 The legacy scripts are preserved at `~/.claude/scripts/_legacy_pre_dreaming/`.
 
@@ -99,7 +99,7 @@ The legacy scripts are preserved at `~/.claude/scripts/_legacy_pre_dreaming/`.
 # Real run (uses ~$1–3 of LLM credits, ~7–9 min). Safe — snapshots before touching memory.
 DREAMING_HOME=~/.dreaming ~/Projects/dreaming/bin/dreaming dream
 # Or kick the launchd job directly (exercises the exact scheduled path + env):
-launchctl kickstart -k gui/$(id -u)/com.jamesguy.dreaming-dream
+launchctl kickstart -k gui/$(id -u)/com.example.dreaming-dream
 ```
 
 ## Snapshot of state at handoff (2026-05-29)
