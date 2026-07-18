@@ -1,14 +1,28 @@
 # dreaming
 
-**Long-term memory for LLM agents.** A four-phase pipeline that captures, consolidates, and curates what your AI assistant learns — across sessions, across projects, across LLMs.
+**Your AI agent learns all day. This is how it sleeps on it.**
 
-Works with **any LLM** that has a CLI with file-edit + bash tools. Ships with a working Claude adapter and stub adapters for Codex, Gemini, Ollama, and raw OpenAI.
+Agents pile everything into a `MEMORY.md` until it rots: stale notes, duplicates, an index too big to load. The fix is not a bigger memory. It is consolidation on a schedule, the way sleep sorts a day into what is worth keeping.
+
+Works with **any LLM** that has a CLI with file-edit and bash tools. Ships with a working Claude adapter and stub adapters for Codex, Gemini, Ollama, and raw OpenAI.
+
+```mermaid
+flowchart LR
+    C["capture<br/>every session<br/>writes what it learns"]
+    S["self-learn<br/>weekly<br/>drafts new memories"]
+    D["dream<br/>monthly<br/>merge, trim, synthesise"]
+    P["promote<br/>you decide<br/>adopt or discard"]
+    C --> S --> D --> P
+    G(["health · hygiene<br/>guard every run"]) -. verify .-> D
+```
+
+One night's sleep, on a schedule: **capture** what happened, **consolidate** it down, **curate** what survives. Two mechanical guards watch the cycle so it cannot quietly corrupt itself: `health` checks each dream followed its contract, `hygiene` catches the rot the loops cannot see.
 
 ---
 
 ## Why
 
-Most agent setups have a memory problem. They append to a `MEMORY.md`, drift accumulates, files get stale, duplicates pile up, and the agent eventually loses the thread of what it knows. The fix isn't "bigger context" — it's **scheduled consolidation**, the way humans dream.
+Most agent setups have a memory problem. They append to a `MEMORY.md`, drift accumulates, files get stale, duplicates pile up, and the agent eventually loses the thread of what it knows. The fix is not "bigger context", it is **scheduled consolidation**, the way humans dream.
 
 `dreaming` runs four loops:
 
