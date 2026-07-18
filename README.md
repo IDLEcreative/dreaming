@@ -38,7 +38,7 @@ Plus a **fitness function** (`dreaming health`) that mechanically verifies every
 ## Quick start
 
 ```bash
-git clone https://github.com/<your-handle>/dreaming.git ~/Projects/dreaming
+git clone https://github.com/IDLEcreative/dreaming.git ~/Projects/dreaming
 ~/Projects/dreaming/bin/dreaming init                # creates ~/.dreaming/
 ~/Projects/dreaming/bin/dreaming adapters            # see what's installed
 DRY_RUN=1 ~/Projects/dreaming/bin/dreaming dream     # smoke-test (no LLM call)
