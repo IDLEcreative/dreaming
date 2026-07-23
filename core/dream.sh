@@ -96,6 +96,11 @@ cleanup() {
   if [ "$exit_code" -ne 0 ]; then
     echo "=== Aborted (exit=$exit_code): $(date) ===" >> "$LOG_FILE" 2>/dev/null || true
     echo "$TIMESTAMP exit=$exit_code" >> "$DREAMING_HOME/.dream-last-failed" 2>/dev/null || true
+  else
+    # A clean run supersedes any earlier failure — clear the sentinel so it
+    # can't go stale and block promote-adopt (a 2026-06-16 sentinel survived
+    # two successful runs and blocked adoption until hand-removed 2026-07-22).
+    rm -f "$DREAMING_HOME/.dream-last-failed" 2>/dev/null || true
   fi
 }
 trap cleanup EXIT INT TERM
